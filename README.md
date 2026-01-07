@@ -198,17 +198,17 @@ OPTIONS
  -V                         Show version and exit
 
 Example:
-    ./t4n.sh -a x86_64
-    ./t4n.sh -a x86_64 -b bspwm
-    ./t4n.sh -a x86_64 -b base -p NetworkManager dbus
-    ./t4n.sh -a x86_64 -b bspwm -o T4n-OS_Base.iso
-    ./t4n.sh -a x86_64 -b bspwm -p "neovim vivaldi tree bat btop" -r https://repo-fi.voidlinux.org/ -o 
+./t4n.sh -a x86_64
+./t4n.sh -a x86_64 -b bspwm
+./t4n.sh -a x86_64 -b base -p NetworkManager dbus
+./t4n.sh -a x86_64 -b bspwm -o T4n-OS_Base.iso
+./t4n.sh -a x86_64 -b bspwm -p "neovim vivaldi tree bat btop" -r https://repo-fi.voidlinux.org/ -o 
 T4n-OS_BSPWM.ISO
-    ./t4n.sh -a x86_64-musl
-    ./t4n.sh -a x86_64-musl -b bspwm
-    ./t4n.sh -a x86_64-musl -b base -p NetworkManager dbus
-    ./t4n.sh -a x86_64-musl -b bspwm -o T4n-OS_Base.iso
-    ./t4n.sh -a x86_64-musl -b bspwm -p "neovim vivaldi tree bat btop" -r https://repo-fi.voidlinux.org/ -o T4n-OS-musl_BSPWM.ISO
+./t4n.sh -a x86_64-musl
+./t4n.sh -a x86_64-musl -b bspwm
+./t4n.sh -a x86_64-musl -b base -p NetworkManager dbus
+./t4n.sh -a x86_64-musl -b bspwm -o T4n-OS_Base.iso
+./t4n.sh -a x86_64-musl -b bspwm -p "neovim vivaldi tree bat btop" -r https://repo-fi.voidlinux.org/ -o T4n-OS-musl_BSPWM.ISO
 ```
 
 ### t4n-base
