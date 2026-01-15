@@ -274,12 +274,6 @@ atau
 ./t4n.sh -a x86_64-musl -b river
 ```
 
-##### All images
-
-```
-./release.sh
-```
-
 ---
 
 ## Referensi & Kredit

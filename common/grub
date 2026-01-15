@@ -1,0 +1,33 @@
+# GRUB boot loader configuration
+
+GRUB_DEFAULT='0'
+GRUB_TIMEOUT='5'
+GRUB_TIMEOUT_STYLE=menu
+
+GRUB_DISTRIBUTOR='T4n-OS'
+
+# Kernel Parameter
+GRUB_CMDLINE_LINUX=""
+GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4"
+
+# Resolution
+GRUB_GFXMODE=auto
+GRUB_GFXPAYLOAD_LINUX=keep
+
+# Theme
+#GRUB_THEME=""
+
+# Disable recovery entries
+GRUB_DISABLE_RECOVERY=true
+
+# OS prober
+GRUB_DISABLE_OS_PROBER=false
+
+# Console
+GRUB_TERMINAL_OUTPUT="gfxterm"
+
+# Disable beep
+GRUB_INIT_TUNE=""
+
+# Save last booted entry (opsional)
+#GRUB_SAVEDEFAULT=true

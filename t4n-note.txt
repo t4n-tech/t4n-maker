@@ -1,0 +1,6 @@
+Hal yang harus di custom
+
+1. include_box()
+2. include_common()
+3. include_dmenu()
+4. include_fuzzel()
