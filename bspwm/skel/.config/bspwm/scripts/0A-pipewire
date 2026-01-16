@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+
+# === PipeWire Autostart for Void ===
+
+# Set runtime environment
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+export PIPEWIRE_RUNTIME_DIR=$XDG_RUNTIME_DIR
+
+# Start PipeWire
+if command -v pipewire >/dev/null 2>&1; then
+    pgrep -x pipewire >/dev/null || pipewire &
+    sleep 1
+    pgrep -x wireplumber >/dev/null || wireplumber &
+fi

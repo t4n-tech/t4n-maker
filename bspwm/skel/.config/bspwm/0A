@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+
+run() {
+    pgrep -u "$UID" -x "$1" >/dev/null 2>&1 || "$@" &
+}
+
+run sxhkd
+
+# PICOM (ORIGINAL)
+# Running Picom
+~/.config/picom/auto.sh &
+
+# Auto pause/resume picom saat fullscreen
+~/.config/picom/autopause.sh &
+
+run xfce4-power-manager
+run dunst
+
+# PipeWire - start with script for better control
+if [ -f "$HOME/.config/pipewire/scripts/start.sh" ]; then
+    "$HOME/.config/pipewire/scripts/start.sh" &
+else
+    # Fallback
+    pipewire &
+    wireplumber &
+fi
+# PipeWire autostart
+~/.config/bspwm/scripts/0A-pipewire &
+
+"$HOME/.config/polybar/launch.sh" &
+
+feh --bg-fill \
+    "$HOME/.config/bspwm/wallpaper/Void.jpg"

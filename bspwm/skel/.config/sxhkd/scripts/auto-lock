@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# 1) Jika ada window fullscreen → jangan lock
+if xprop -root _NET_ACTIVE_WINDOW | grep -q Po; then
+    active=$(xprop -root _NET_ACTIVE_WINDOW | awk -F' ' '{print $5}')
+    [ "$active" = "0x0" ] && exit 1
+    if xprop -id "$active" | grep -q "_NET_WM_STATE_FULLSCREEN"; then
+        exit 1
+    fi
+fi
+
+# 2) Jika media sedang playing → jangan lock
+status=$(playerctl status 2>/dev/null)
+if [ "$status" = "Playing" ]; then
+    exit 1
+fi
+
+# Default → aktifkan lock
+betterlockscreen -l

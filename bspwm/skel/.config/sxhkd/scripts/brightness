@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+bar_color="#7f7fff"
+volume_step=1
+brightness_step=5
+max_volume=100
+notification_timeout=1000  # in ms
+
+# Uses brightnessctl instead of xbacklight
+function get_brightness {
+    brightnessctl g | awk '{print int($1)}'
+    # You could also use: brightnessctl info | grep -Po '(?<=Current brightness: )[0-9]+'
+}
+
+# Calculates brightness percentage
+function get_brightness_percent {
+    current=$(brightnessctl g)
+    max=$(brightnessctl m)
+    percent=$(( 100 * current / max ))
+    echo $percent
+}
+
+function get_brightness_icon {
+    brightness_icon="  "
+}
+
+function show_brightness_notif {
+    get_brightness_icon
+    brightness=$(get_brightness_percent)
+    notify-send  -i brightness_icon -t $notification_timeout -h string:x-dunst-stack-tag:brightness_notif -h int:value:$brightness "$brightness_icon $brightness%"
+}
+
+case $1 in
+  up)
+    brightnessctl s +$brightness_step% > /dev/null
+    show_brightness_notif
+    ;;
+  down)
+    brightnessctl s $brightness_step%- > /dev/null
+    show_brightness_notif
+    ;;
+esac

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+# Jalankan betterlockscreen
+betterlockscreen -l &
+
+# Tunggu sedikit biar i3lock kebuka sempurna
+sleep 1
+
+# Masuk mode suspend
+loginctl suspend
+

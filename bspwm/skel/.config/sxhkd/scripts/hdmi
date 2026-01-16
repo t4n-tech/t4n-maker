@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+case $1 in
+  connect)
+    xrandr --output eDP-1 --primary --mode 1920x1080 --output HDMI-1 --mode 1920x1080 --right-of eDP-1
+    notify-send "🖥️ HDMI" "HDMI-1 Connected"
+    ;;
+  disconnect)
+    xrandr --output HDMI-1 --off
+    notify-send "🖥️ HDMI" "HDMI-1 Disconnected"
+    ;;
+esac
+

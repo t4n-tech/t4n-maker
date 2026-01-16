@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+#Searching All Connected Monitor & Counting
+MONITORS=($(xrandr --query | grep "Connected" | awk '{ print $1 }'))
+COUNT=${#MONITORS[@]}
+
+if [ $COUNT -eq 1 ]; then
+  echo "Only 1 Monitor (${MONITORS[0]})"
+  xrandr --output $(MONITORS[0]) --auto
+elif [ $COUNT -eq 2 ]; then
+  echo "Dual Monitor Detected: ${MONITORS[0]} & ${MONITORS[1]}"
+  #Setup Main Monitor As Main, Second on the Right
+  xrandr --output ${MONITORS[0]} --primary --auto --output ${MONITORS[1]} --auto --right-of ${MONITORS[0]}
+else
+  echo "Multi Monitor ($COUNT) Detected: ${MONITORS[@]}"
+  #Arrange All Monitors Horyzontally
+  PRIMARY=${MONITORS[0]}
+  xrandr --output $PRIMARY --primary --auto
+  PREV=$PRIMARY
+  for ((i=1; i<$COUNT; i++)); do
+    xrandr --output ${Monitor[$i]} --auto --right-of $PREV
+    PREV=${MONITORS[$i]}
+  done
+fi
