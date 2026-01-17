@@ -2,6 +2,7 @@
 #-
 # Copyright (c) 2013-2015 Juan Romero Pardines.
 # Copyright (c) 2017 Google
+# Copyright (c) 2025 t4n-company
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -47,27 +48,28 @@ trap 'die "Interrupted! exiting..."' INT TERM HUP
 # these down the road in later scripts.
 usage() {
     cat <<-EOH
-	Usage: $PROGNAME [options] <arch>
+	Penggunaan: $PROGNAME [opsi] <arch>
 
-	Generate a Void Linux ROOTFS tarball for the specified architecture.
+	Menghasilkan file tarball T4n OS ROOTFS untuk arsitektur yang ditentukan.
 
-	Supported architectures:
+	Arsitektur yang Di-Support:
 	 i686, i686-musl, x86_64, x86_64-musl,
 	 armv5tel, armv5tel-musl, armv6l, armv6l-musl, armv7l, armv7l-musl
 	 aarch64, aarch64-musl,
 	 mipsel, mipsel-musl,
 	 ppc, ppc-musl, ppc64le, ppc64le-musl, ppc64, ppc64-musl
 	 riscv64, riscv64-musl
+    [+] Create by Gh0sT4n(https://github.com/gh0st4n)
 	
 	OPTIONS
-	 -b <system-pkg>  Set an alternative base-system package (default: base-container-full)
-	 -c <cachedir>    Set XBPS cache directory (default: ./xbps-cachedir-<arch>)
-	 -C <file>        Full path to the XBPS configuration file
-	 -r <repo>        Use this XBPS repository. May be specified multiple times
-	 -o <file>        Filename to write the ROOTFS to (default: automatic)
-	 -x <num>         Number of threads to use for image compression (default: dynamic)
-	 -h               Show this help and exit
-	 -V               Show version and exit
+	 -b <system-pkg>  Menentukan paket sistem dasar alternatif (default: base-container-full)
+	 -c <cachedir>    Menentukan direktori cache XBPS (default: ./xbps-cachedir-<arch>)
+	 -C <file>        Jalur lengkap ke file konfigurasi XBPS
+	 -r <repo>        Menggunakan repository XBPS tertentu (bisa lebih dari satu)
+	 -o <file>        Nama file untuk menulis ROOTFS (default: otomatis)
+	 -x <num>         Jumlah thread yang digunakan untuk kompresi gambar (default: dinamis)
+	 -h               Tampilkan bantuan & keluar
+	 -V               Tampilkan versi & keluar
 	EOH
 }
 

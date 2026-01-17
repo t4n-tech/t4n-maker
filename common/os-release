@@ -1,9 +1,13 @@
-NAME="Void"
-ID="void"
-PRETTY_NAME="Void Linux"
-HOME_URL="https://voidlinux.org/"
-DOCUMENTATION_URL="https://docs.voidlinux.org/"
-LOGO="void-logo"
+NAME="T4n-OS"
+PRETTY_NAME="T4n-OS"
+ID="t4n-os"
+ID_LIKE="void"
 ANSI_COLOR="0;38;2;71;128;97"
+HOME_URL="https://t4n-company.github.io/t4n-os/"
+DOCUMENTATION_URL="https://t4n-company.github.io/t4n-os/doc/index.html"
+LOGO="t4n-os"
 
-DISTRIB_ID="void"
+DISTRIB_ID="T4n OS"
+DISTRIB_DESCRIPTION="T4n OS (Void Linux Based)"
+
+

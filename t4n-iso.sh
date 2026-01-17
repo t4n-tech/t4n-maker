@@ -13,26 +13,26 @@ DATE=$(date -u +%Y%m%d)
 
 usage() {
 	cat <<-EOH
-	Usage: $PROGNAME [options ...] [-- mklive options ...]
+    Penggunaan: $PROGNAME [opsi ...] [-- opsi t4n-live ...]
 
-	Wrapper script around mklive.sh for several standard flavors of live images.
-	Adds void-installer and other helpful utilities to the generated images.
-        
-	create by Gh0sT4n(https://github.com/gh0st4n) 
+    Script pembungkus t4n-live.sh untuk berbagai varian live image standar.
+    Menambahkan void-installer dan utilitas tambahan ke dalam image.
 
-	OPTIONS
-	 -a <arch>     Set architecture (or platform) in the image
-	 -b <variant>  One of base, server, bspwm, xfce, river or kde. 
-               May be specified multiple times to build multiple variants.
-	 -d <date>     Override the datestamp on the generated image (YYYYMMDD format)
+    [+] Create by Gh0sT4n(https://github.com/gh0st4n)
+
+	OPSI
+	 -a <arch>     Menentukan arsitektur (atau platform)
+	 -b <variant>  base, base-x11, base-wayland, server, enlightenment
+                   xfce, xfce-wayland, kde, bspwm atau river (default: base)
+	 -d <date>     Date-stamp image (format YYYYMMDD)
 	 -t <arch-date-variant>
-	               Equivalent to setting -a, -b, and -d
-	 -r <repo>     Use this XBPS repository. May be specified multiple times
-	 -h            Show this help and exit
-	 -V            Show version and exit
+	               Setara dengan pengaturan -a, -b, dan -d
+	 -r <repo>     Menggunakan repository XBPS tertentu (bisa lebih dari satu)
+	 -h            Tampilkan bantuan & keluar
+	 -V            Tampilkan versi & keluar
 
-	Other options can be passed directly to mklive.sh by specifying them after the --.
-	See mklive.sh -h for more details.
+	Opsi lain dapat diteruskan langsung ke t4n-live.sh setelah tanda --.
+	lihat t4n-live.sh -h untuk detail lainnya.
 	EOH
 }
 
@@ -59,15 +59,98 @@ cleanup() {
 
 include_installer() {
     if [ -x installer.sh ]; then
-        MKLIVE_VERSION="$(PROGNAME='' version)"
+        LIVE_VERSION="$(PROGNAME='' version)"
         installer=$(mktemp)
-        sed "s/@@MKLIVE_VERSION@@/${MKLIVE_VERSION}/" installer.sh > "$installer"
+        sed "s/@@LIVE_VERSION@@/${LIVE_VERSION}/" installer.sh > "$installer"
         install -Dm755 "$installer" "$INCLUDEDIR"/usr/bin/void-installer
         rm "$installer"
     else
         echo installer.sh not found >&2
         exit 1
     fi
+}
+
+setup_dbus() {
+    PKGS="$PKGS dbus"
+    
+    case "$variant" in
+        base-x11|base-wayland|xfce|kde|bspwm|river)
+            PKGS="$PKGS dbus-x11"
+            ;;
+    esac
+    
+    # Direktori wajib
+    mkdir -p "$INCLUDEDIR"/var/lib/dbus
+    mkdir -p "$INCLUDEDIR"/var/run/dbus
+    mkdir -p "$INCLUDEDIR"/etc/sv/dbus
+    mkdir -p "$INCLUDEDIR"/etc/sv/dbus/log
+    
+    # Machine ID (wajib untuk D-Bus)
+    dbus-uuidgen > "$INCLUDEDIR"/var/lib/dbus/machine-id 2>/dev/null || \
+    echo "00000000000000000000000000000000" > "$INCLUDEDIR"/var/lib/dbus/machine-id
+    
+    # Service runit (versi Void Linux yang benar)
+    cat > "$INCLUDEDIR"/etc/sv/dbus/run << 'EOF'
+#!/bin/sh
+exec 2>&1
+[ ! -d /run/dbus ] && install -m755 -g 22 -o 22 -d /run/dbus
+exec dbus-daemon --system --nofork --nopidfile
+EOF
+    chmod 755 "$INCLUDEDIR"/etc/sv/dbus/run
+    
+    # Log service runit
+    cat > "$INCLUDEDIR"/etc/sv/dbus/log/run << 'EOF'
+#!/bin/sh
+exec vlogger -t dbus -p daemon
+EOF
+    chmod 755 "$INCLUDEDIR"/etc/sv/dbus/log/run
+    
+    # Symlink config (seperti pipewire)
+    mkdir -p "$INCLUDEDIR"/etc/dbus-1
+    ln -sf /usr/share/dbus-1/system.conf "$INCLUDEDIR"/etc/dbus-1/
+    ln -sf /usr/share/dbus-1/session.conf "$INCLUDEDIR"/etc/dbus-1/
+    
+    # Symlink service directories
+    mkdir -p "$INCLUDEDIR"/usr/share/dbus-1
+    ln -sf /usr/share/dbus-1/services "$INCLUDEDIR"/usr/share/dbus-1/
+    ln -sf /usr/share/dbus-1/system-services "$INCLUDEDIR"/usr/share/dbus-1/
+    
+    # Enable service
+    SERVICES="$SERVICES dbus"
+}
+
+setup_polkitd() {
+    PKGS="$PKGS polkit"
+    
+    # Direktori service polkitd
+    mkdir -p "$INCLUDEDIR"/etc/sv/polkitd
+    mkdir -p "$INCLUDEDIR"/etc/sv/polkitd/log
+    
+    # Service runit (mirip dengan Void Linux default)
+    cat > "$INCLUDEDIR"/etc/sv/polkitd/run << 'EOF'
+#!/bin/sh
+exec 2>&1
+exec /usr/libexec/polkitd --no-debug
+EOF
+    chmod 755 "$INCLUDEDIR"/etc/sv/polkitd/run
+    
+    # Log service
+    cat > "$INCLUDEDIR"/etc/sv/polkitd/log/run << 'EOF'
+#!/bin/sh
+exec vlogger -t polkitd -p daemon.info
+EOF
+    chmod 755 "$INCLUDEDIR"/etc/sv/polkitd/log/run
+    
+    # Enable service
+    SERVICES="$SERVICES polkitd"
+    
+    # Buat direktori untuk rules dan actions
+    mkdir -p "$INCLUDEDIR"/usr/share/polkit-1/rules.d
+    mkdir -p "$INCLUDEDIR"/usr/share/polkit-1/actions
+    mkdir -p "$INCLUDEDIR"/etc/polkit-1/rules.d
+    
+    # Symlink konfigurasi default polkit
+    ln -sf /usr/share/polkit-1/actions/* "$INCLUDEDIR"/usr/share/polkit-1/actions/ 2>/dev/null || true
 }
 
 setup_pipewire() {
@@ -79,11 +162,12 @@ setup_pipewire() {
             ;;
     esac
     mkdir -p "$INCLUDEDIR"/etc/xdg/autostart
-    ln -sf /usr/share/applications/pipewire.desktop "$INCLUDEDIR"/etc/xdg/autostart/
     mkdir -p "$INCLUDEDIR"/etc/pipewire/pipewire.conf.d
+    mkdir -p "$INCLUDEDIR"/etc/alsa/conf.d
+
+    ln -sf /usr/share/applications/pipewire.desktop "$INCLUDEDIR"/etc/xdg/autostart/
     ln -sf /usr/share/examples/wireplumber/10-wireplumber.conf "$INCLUDEDIR"/etc/pipewire/pipewire.conf.d/
     ln -sf /usr/share/examples/pipewire/20-pipewire-pulse.conf "$INCLUDEDIR"/etc/pipewire/pipewire.conf.d/
-    mkdir -p "$INCLUDEDIR"/etc/alsa/conf.d
     ln -sf /usr/share/alsa/alsa.conf.d/50-pipewire.conf "$INCLUDEDIR"/etc/alsa/conf.d
     ln -sf /usr/share/alsa/alsa.conf.d/99-pipewire-default.conf "$INCLUDEDIR"/etc/alsa/conf.d
 }
@@ -92,75 +176,75 @@ include_common_cli() {
     mkdir -p "$INCLUDEDIR"/etc
     mkdir -p "$INCLUDEDIR"/etc/default
     mkdir -p "$INCLUDEDIR"/etc/runit
+    mkdir -p "$INCLUDEDIR"/etc/skel
 
+    cp ./common/resolv.conf "$INCLUDEDIR"/etc/
     cp ./common/os-release "$INCLUDEDIR"/etc/
     cp ./common/grub "$INCLUDEDIR"/etc/default/
     cp ./common/.bashrc "$INCLUDEDIR"/etc/skel/
     
     cp -r ./common/runit/* "$INCLUDEDIR"/etc/runit/
-
-    sudo chsh -s /bin/bash root
 }
 
-include_common_gui() {
-    mkdir -p "$INCLUDEDIR"/boot/grub/themes
-    mkdir -p "$INCLUDEDIR"/etc
-    mkdir -p "$INCLUDEDIR"/etc/skel/.config
-    mkdir -p "$INCLUDEDIR"/usr/share/plymouth
-	mkdir -p "$INCLUDEDIR"/usr/share/polkit-1/rules.d
-
-	cp -r ./common/t4n-grub-theme "$INCLUDEDIR"/boot/grub/themes/
-    cp -r ./common/t4n "$INCLUDEDIR"/usr/share/plymouth/themes/
-	cp -r ./common/t4n-spinner "$INCLUDEDIR"/usr/share/plymouth/themes/
-	cp -r ./common/config/* "$INCLUDEDIR"/etc/skel/.config/
-	cp -r ./common/Wallpaper "$INCLUDEDIR"/etc/skel/
-	cp -r ./common/Wallpaper "$INCLUDEDIR"/usr/share/
-
-    cp ./common/os-release "$INCLUDEDIR"/etc/
-    cp ./common/grub "$INCLUDEDIR"/etc/default/
-	cp ./common/T4n-OS.png "$INCLUDEDIR"/usr/share/pixmaps/
-	cp ./common/splash.png "$INCLUDEDIR"/usr/share/void-artwork/
-	cp ./common/.bashrc "$INCLUDEDIR"/etc/skel/
-	cp ./common/.Xresources "$INCLUDEDIR"/etc/skel/
-}
+#include_common_gui() {
+#    mkdir -p "$INCLUDEDIR"/boot/grub/themes
+#    mkdir -p "$INCLUDEDIR"/etc
+#	 mkdir -p "$INCLIDEDIR"/etc/skel
+#    mkdir -p "$INCLUDEDIR"/etc/skel/.config
+#    mkdir -p "$INCLUDEDIR"/usr/share/plymouth
+#    mkdir -p "$INCLUDEDIR"/usr/share/polkit-1/rules.d
+#
+#    cp -r ./common/t4n-grub-theme "$INCLUDEDIR"/boot/grub/themes/
+#    cp -r ./common/t4n "$INCLUDEDIR"/usr/share/plymouth/themes/
+#    cp -r ./common/t4n-spinner "$INCLUDEDIR"/usr/share/plymouth/themes/
+#    cp -r ./common/config/* "$INCLUDEDIR"/etc/skel/.config/
+#    cp -r ./common/Wallpaper "$INCLUDEDIR"/etc/skel/
+#    cp -r ./common/Wallpaper "$INCLUDEDIR"/usr/share/
+#
+#    cp ./common/os-release "$INCLUDEDIR"/etc/
+#    cp ./common/grub "$INCLUDEDIR"/etc/default/
+#    cp ./common/T4n-OS.png "$INCLUDEDIR"/usr/share/pixmaps/
+#	 cp ./common/splash.png "$INCLUDEDIR"/usr/share/void-artwork/
+#	 cp ./common/.bashrc "$INCLUDEDIR"/etc/skel/
+#	 cp ./common/.Xresources "$INCLUDEDIR"/etc/skel/
+#}
 
 #include_polybar() {
-#   PKGS="$PKGS polybar cbatticon network-manager-applet redshift-gtk volumeicon"
-#	mkdir -p "$INCLUDEDIR"/etc/skel/.config
-#	mkdir -p "$INCLUDEDIR"/etc/skel/.local/share
-#	cp -r ./common/polybar "$INCLUDEDIR"/etc/skel/.config/
-#	cp -r ./common/fonts "$INCLUDEDIR"/etc/skel/.local/share/
+#    PKGS="$PKGS polybar cbatticon network-manager-applet redshift-gtk volumeicon"
+#	 mkdir -p "$INCLUDEDIR"/etc/skel/.config
+#	 mkdir -p "$INCLUDEDIR"/etc/skel/.local/share
+#	 cp -r ./common/polybar "$INCLUDEDIR"/etc/skel/.config/
+#	 cp -r ./common/fonts "$INCLUDEDIR"/etc/skel/.local/share/
 #}
 #include_rofi() {
-#   PKGS="$PKGS rofi"
-#	mkdir -p "$INCLUDEDIR"/etc/skel/.config
-#	mkdir -p "$INCLUDEDIR"/usr/bin
-#	cp -r ./common/rofi_c/rofi "$INCLUDEDIR"/etc/skel/.config
-#	cp ./common/rofi_c/rofi-power-menu "$INCLUDEDIR"/usr/bin/
+#    PKGS="$PKGS rofi"
+#	 mkdir -p "$INCLUDEDIR"/etc/skel/.config
+#	 mkdir -p "$INCLUDEDIR"/usr/bin
+#	 cp -r ./common/rofi_c/rofi "$INCLUDEDIR"/etc/skel/.config
+#	 cp ./common/rofi_c/rofi-power-menu "$INCLUDEDIR"/usr/bin/
 #}
 
 
 #include_wofi() {
-#   PKGS="$PKGS wofi"
-#	mkdir -p "$INCLUDEDIR"/etc/skel/.config
-#	mkdir -p "$INCLUDEDIR"/usr/bin
-#	cp -r ./common/wofi_c/wofi "$INCLUDEDIR"/etc/skel/.config
-#	cp ./common/wofi_c/wofi-power-menu "$INCLUDEDIR"/usr/bin/
+#    PKGS="$PKGS wofi"
+#	 mkdir -p "$INCLUDEDIR"/etc/skel/.config
+#	 mkdir -p "$INCLUDEDIR"/usr/bin
+#	 cp -r ./common/wofi_c/wofi "$INCLUDEDIR"/etc/skel/.config
+#	 cp ./common/wofi_c/wofi-power-menu "$INCLUDEDIR"/usr/bin/
 #}
 
 
 #include_way() {
-#   PKGS="$PKGS cliphist network-manager-applet nwg-look nwg-launchers pavucontrol SwayNotificationCenter Waybar wlsunset xorg-server-xwayland xwayland-satellite"
-#	cp ./common/wswap-way "$INCLUDEDIR"/usr/bin/
-#	mkdir -p "$INCLUDEDIR"/etc/skel/.config
-#	cp -r ./common/waybar "$INCLUDEDIR"/etc/skel/.config/
+#    PKGS="$PKGS cliphist network-manager-applet nwg-look nwg-launchers pavucontrol SwayNotificationCenter Waybar wlsunset xorg-server-xwayland xwayland-satellite"
+#	 cp ./common/wswap-way "$INCLUDEDIR"/usr/bin/
+#    mkdir -p "$INCLUDEDIR"/etc/skel/.config
+#    cp -r ./common/waybar "$INCLUDEDIR"/etc/skel/.config/
 #}
 #include_x11() {
 #    PKGS="$PKGS dunst redshift scrot slock st transset xautolock xcompmgr"
-#	cp ./common/wswap-X "$INCLUDEDIR"/usr/bin/
+#    cp ./common/wswap-X "$INCLUDEDIR"/usr/bin/
 #}
 
-include_base(){}
 #include_server() {}
 
 #include_xfce() {
@@ -224,20 +308,28 @@ build_variant() {
 
     case $variant in
         base)
+	    PKGS="$PKGS $FILE_PKGS"
+            CLI=yes
+
             SERVICES="$SERVICES dhcpcd wpa_supplicant acpid"
         ;;
         base-x11)
-            PKGS="$PKGS $XORG_PKGS $FILE_PKGS tree eza exa"
+            PKGS="$PKGS $XORG_PKGS $FILE_PKGS tree bat eza exa nano NetworkManager network-manager-applet"
             CLI=yes
 
             SERVICES="$SERVICES dbus NetworkManager acpid"
         ;;
         base-wayland)
+            # PKGS="$PKGS $WAYlAND_PKGS $FILE_PKGS tree eza exa NetworkManager network-manager-applet"
+            # CLI=yes
             echo "on Going"
+            exit 1
         ;;
         server)
+            # CLI=yes
             # SERVICES="$SERVICES dhcpcd wpa_supplicant acpid"
             echo "on Going"
+            exit 1
         ;;
         #enlightenment)
             #PKGS="$PKGS $XORG_PKGS lightdm lightdm-gtk-greeter enlightenment terminology udisks2 firefox"
@@ -254,44 +346,45 @@ build_variant() {
             #     LIGHTDM_SESSION="xfce-wayland"
             # fi
 
-            #COMMON=yes
-            #X11=yes
-            #XFCE=yes
+            #CLI = yes
             # Paket sangat minimal untuk XFCE
             #PKGS="$PKGS $XORG_PKGS $CALAMARES_MINIMAL xfce4 xfce4-terminal mousepad ristretto"
             #SERVICES="$SERVICES dbus elogind sddm NetworkManager polkitd"
             echo "on Going"
+            exit 1
         ;;
         bspwm)
             # PKGS="$PKGS $XORG_PKGS lightdm lightdm-gtk-greeter mate mate-extra gnome-keyring network-manager-applet gvfs-afc gvfs-mtp gvfs-smb udisks2 firefox"
             # SERVICES="$SERVICES dbus lightdm NetworkManager polkitd"
             # LIGHTDM_SESSION=mate
 
-            #COMMON=yes
-            #X11=yes
-            #DMENU=yes  # hanya dmenu, tanpa rofi/polybar
+            #CLI=yes
             # Paket dasar untuk bspwm
             #PKGS="$PKGS $XORG_PKGS $D77_CORE_MINIMAL bspwm sxhkd dmenu st"
             #SERVICES="$SERVICES dbus elogind sddm NetworkManager polkitd"
+            echo "on Going"
+            exit 1
         ;;
         kde)
-            # PKGS="$PKGS $XORG_PKGS kde5 konsole firefox dolphin NetworkManager"
+            # PKGS="$PKGS $WAYlAND_PKGS $FILE_PKGS tree eza exa NetworkManager network-manager-applet kde5 konsole firefox dolphin"
+            #CLI=yes
+
             # SERVICES="$SERVICES dbus NetworkManager sddm"
             echo "on Going"
+            exit 1
         ;;
         river)
-            # PKGS="$PKGS $XORG_PKGS river lightdm lightdm-gtk-greeter gvfs-afc gvfs-mtp gvfs-smb udisks2 firefox"
-            # SERVICES="$SERVICES acpid dbus dhcpcd wpa_supplicant lightdm polkitd"
-            # LIGHTDM_SESSION=LXDE
+            # PKGS="$PKGS $WAYlAND_PKGS $FILE_PKGS tree eza exa NetworkManager network-manager-applet firefox dolphin"
+            #CLI=yes
+            #SERVICES="$SERVICES acpid dbus dhcpcd wpa_supplicant lightdm polkitd"
+            #LIGHTDM_SESSION=LXDE
 
-            #COMMON=yes
-            #RIVER=yes
-            #WAY=yes
-            #FUZZEL=yes
+            #CLI=yes
             # Paket dasar Wayland + river
             #PKGS="$PKGS $XORG_PKGS $WAYLAND_PKGS $D77_CORE_MINIMAL river fuzzel foot"
             #SERVICES="$SERVICES dbus elogind sddm NetworkManager polkitd"
             echo "on Going"
+            exit 1
         ;;
         *)
             >&2 echo "Unknown variant $variant"
@@ -322,22 +415,27 @@ EOF
     fi
 
     case "$variant" in
-        base|base-x11|base-wayland|server)
+        base|server)
+            ;;
+        base-x11|base-wayland)
+            setup_dbus
             ;;
         *)
+            setup_dbus
             setup_pipewire
+            setup_polkitd
             ;;
     esac
 
 
-    ./mklive.sh -a "$TARGET_ARCH" -o "$IMG" -p "$PKGS" -S "$SERVICES" -I "$INCLUDEDIR" \
+    ./t4n-live.sh -a "$TARGET_ARCH" -o "$IMG" -p "$PKGS" -S "$SERVICES" -I "$INCLUDEDIR" \
         ${KERNEL_PKG:+-v $KERNEL_PKG} ${REPO} "$@"
 
 	cleanup
 }
 
-if [ ! -x mklive.sh ]; then
-    echo mklive.sh not found >&2
+if [ ! -x t4n-live.sh ]; then
+    echo t4n-live.sh not found >&2
     exit 1
 fi
 

@@ -2,6 +2,7 @@
 #
 #-
 # Copyright (c) 2009-2015 Juan Romero Pardines.
+# Copyright (c) 2025 t4n-company
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -72,42 +73,43 @@ error_out() {
 
 usage() {
 	cat <<-EOH
-	Usage: $PROGNAME [options]
+	Penggunaan: t4n-live.sh [opsi]
 
-	Generates a basic live ISO image of Void Linux. This ISO image can be written
-	to a CD/DVD-ROM or any USB stick.
+    Menghasilkan ISO live T4n OS dasar.
+    ISO dapat ditulis ke CD/DVD atau USB.
 
-	To generate a more complete live ISO image, use mkiso.sh.
+    [!] Untuk Menghasil File ISO Lebih Lengkap, Gunakan t4n-iso.sh
+    [+] Create by Gh0sT4n(https://github.com/gh0st4n)
 
 	OPTIONS
-	 -a <arch>          Set XBPS_ARCH in the ISO image
-	 -b <system-pkg>    Set an alternative base package (default: base-system)
-	 -r <repo>          Use this XBPS repository. May be specified multiple times
-	 -c <cachedir>      Use this XBPS cache directory (default: ./xbps-cachedir-<arch>)
-	 -H <host_cachedir> Use this Host XBPS cache directory (default: ./xbps-cachedir-<host_arch>)
-	 -k <keymap>        Default keymap to use (default: us)
-	 -l <locale>        Default locale to use (default: en_US.UTF-8)
+     -a <arch>          Tentukan XBPS_ARCH dalam ISO image
+	 -b <system-pkg>    Tentukan paket dasar alternatif (default: base-system)
+	 -r <repo>          Menggunakan repository XBPS tertentu (bisa lebih dari satu)
+	 -c <cachedir>      Gunakan direktori cache XBPS ini (default: ./xbps-cachedir-<arch>)
+	 -H <host_cachedir> Gunakan direktori cache XBPS Host ini (default: ./xbps-cachedir-<host_arch>)
+     -k <keymap>        Keymap default (default: us)
+     -l <locale>        Locale default (default: en_US.UTF-8)
 	 -i <lz4|gzip|bzip2|xz>
-	                    Compression type for the initramfs image (default: xz)
-	 -s <gzip|lzo|xz>   Compression type for the squashfs image (default: xz)
-	 -o <file>          Output file name for the ISO image (default: automatic)
-	 -p "<pkg> ..."     Install additional packages in the ISO image
-	 -g "<pkg> ..."     Ignore packages when building the ISO image
-	 -I <includedir>    Include directory structure under given path in the ROOTFS
-	 -S "<service> ..." Enable services in the ISO image
-	 -e <shell>         Default shell of the root user (must be absolute path).
-	                    Set the live.shell kernel argument to change the default shell of anon.
-	 -C "<arg> ..."     Add additional kernel command line arguments
+	                    Tipe kompresi untuk image initramfs (default: xz)
+	 -s <gzip|lzo|xz>   Tipe kompresi untuk image squashfs (default: xz)
+	 -o <file>          Nama file output image ISO (default: automatic)
+	 -p "<pkg> ..."     Menambahkan paket dalam image ISO
+	 -g "<pkg> ..."     Paket yang diabaikan saat proses build ISO
+	 -I <includedir>    Menyertakan struktur direktori di path tertentu ke dalam ROOTFS
+	 -S "<service> ..." mengaktifkan service di image ISO
+	 -e <shell>         Shell default pengguna root (harus berupa jalur absolut).
+                        Atur argumen kernel live.shell untuk mengubah shell default menjadi anon.
+	 -C "<arg> ..."     Menambahkan argumen tambahan ke command line kernel
 	 -P "<platform> ..."
-	                    Platforms to enable for aarch64 EFI ISO images (available: pinebookpro, x13s)
-	 -T <title>         Modify the bootloader title (default: Void Linux)
-	 -v linux<version>  Install a custom Linux version on ISO image (default: linux metapackage).
-	                    Also accepts linux metapackages (linux-mainline, linux-lts).
-	 -x <script>        Path to a postsetup script to run before generating the initramfs
-                            (receives the path to the ROOTFS as an argument)
-	 -K                 Do not remove builddir
-	 -h                 Show this help and exit
-	 -V                 Show version and exit
+	                    Coming Soon
+     -T <title>         Ubah judul bootloader (default: T4n OS)
+	 -v linux<version>  Instal versi Linux kustom pada citra ISO (default: linux metapaket).
+                        Juga menerima metapaket linux (linux-mainline, linux-lts).
+	 -x <script>        Jalur ke skrip postsetup yang akan dijalankan sebelum menghasilkan initramfs
+                            (menerima jalur ke ROOTFS sebagai argumen)
+	 -K                 Jangan hapus builddir
+	 -h                 Tampilkan Bantuan dan Keluar
+	 -V                 Tampilkan Versi dan Keluar
 	EOH
 }
 
@@ -546,7 +548,7 @@ HOST_ARCH=$(xbps-uhelper arch)
 : ${INITRAMFS_COMPRESSION:=xz}
 : ${SQUASHFS_COMPRESSION:=xz}
 : ${BASE_SYSTEM_PKG:=base-system}
-: ${BOOT_TITLE:="Void Linux"}
+: ${BOOT_TITLE:="T4n OS"}
 : ${LINUX_VERSION:=linux}
 
 XBPS_TARGET_ARCH="$TARGET_ARCH" register_binfmt

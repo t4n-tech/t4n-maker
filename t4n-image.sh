@@ -2,6 +2,7 @@
 #-
 # Copyright (c) 2013-2016 Juan Romero Pardines.
 # Copyright (c) 2017 Google
+# Copyright (c) 2025 t4n-company
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -111,7 +112,7 @@ fi
 
 # Setup the platform variable.  Here we want just the name and
 # optionally -musl if this is the musl variant.
-PLATFORM="${ROOTFS_TARBALL#void-}"
+PLATFORM="${ROOTFS_TARBALL#t4n-os-}"
 PLATFORM="${PLATFORM%-PLATFORMFS*}"
 
 # Be absolutely certain the platform is supported before continuing
@@ -150,7 +151,7 @@ fi
 # will include the platform the image is being built for and the date
 # on which it was built.
 if [ -z "$FILENAME" ]; then
-    FILENAME="void-${PLATFORM}-$(date -u +%Y%m%d).img"
+    FILENAME="t4n-os_${PLATFORM}-$(date -u +%Y%m%d).img"
 fi
 
 # Create the base image.  This was previously accomplished with dd,
@@ -233,7 +234,7 @@ if [ "$ROOT_FSTYPE" = "f2fs" ]; then
     fspassno="0"
 fi
 
-# Void images prefer uuids to nodes in /dev since these are not
+# T4n-OS images prefer uuids to nodes in /dev since these are not
 # dependent on the hardware layout.  On a single board computer this
 # may not matter much but it makes the cloud images easier to manage.
 echo "UUID=$ROOT_UUID / $ROOT_FSTYPE defaults 0 ${fspassno}" >> "${ROOTFS}/etc/fstab"
@@ -344,7 +345,7 @@ GCP*)
     rm -f "${ROOTFS}/etc/ssh/moduli"
 
     # Force the hostname since this isn't read from DHCP
-    echo void-GCE > "${ROOTFS}/etc/hostname"
+    echo t4n-os_GCE > "${ROOTFS}/etc/hostname"
 
     # Cleanup the chroot from anything that was setup for the
     # run_cmd_chroot commands
