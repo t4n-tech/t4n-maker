@@ -1,11 +1,9 @@
 #!/bin/bash
 #
 #-
-# SPDX-License-Identifier: BSD-2-Clause
-#
-# Based on mklive.sh from Void Linux
 # Copyright (c) 2009-2015 Juan Romero Pardines.
-# Copyright (c) 2026 T4n Company
+# Copyright (c) 2026 T4n Tech.
+# Copyright (c) 2026 Gh0sT4n.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -81,7 +79,7 @@ usage() {
 	Generates a basic live ISO image of T4n OS. This ISO image can be written
 	to a CD/DVD-ROM or any USB stick.
 
-	To generate a more complete live ISO image, use mkiso.sh.
+	To generate a more complete live ISO image, use t4n-iso.sh.
 
 	OPTIONS
 	 -a <arch>          Set XBPS_ARCH in the ISO image
@@ -534,7 +532,7 @@ while getopts "a:b:r:H:c:C:T:Kk:l:i:I:S:e:s:o:p:g:v:P:x:Vh" opt; do
 	esac
 done
 shift $((OPTIND - 1))
-XBPS_REPOSITORY="$XBPS_REPOSITORY --repository=https://repo-fi.voidlinux.org/current --repository=https://repo-fi.voidlinux.org/current/musl --repository=https://repo-fi.voidlinux.org//current/aarch64"
+XBPS_REPOSITORY="$XBPS_REPOSITORY --repository=https://repo-fi.voidlinux.org/current --repository=https://repo-fi.voidlinux.org/current/musl --repository=https://repo-fi.voidlinux.org/current/aarch64"
 
 # Configure dracut to use overlayfs for the writable overlay.
 BOOT_CMDLINE="$BOOT_CMDLINE rd.live.overlay.overlayfs=1 "
@@ -669,7 +667,7 @@ if [ "$?" -ne "0" ]; then
     die "Failed to find kernel package version"
 fi
 
-: ${OUTPUT_FILE="t4n-os-live-${TARGET_ARCH}-${KERNELVERSION}-$(date -u +%Y%m%d).iso"}
+: ${OUTPUT_FILE="void-live-${TARGET_ARCH}-${KERNELVERSION}-$(date -u +%Y%m%d).iso"}
 
 print_step "Installing software to generate the image: ${REQUIRED_PKGS[*]} ..."
 install_prereqs "${REQUIRED_PKGS[@]}"

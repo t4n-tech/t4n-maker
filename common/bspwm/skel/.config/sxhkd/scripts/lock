@@ -1,5 +1,0 @@
-#!/usr/bin/bash
-
-sleep 1
-
-betterlockscreen -l &

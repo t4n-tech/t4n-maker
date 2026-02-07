@@ -4,12 +4,6 @@ set -eu
 
 . ./lib.sh
 
-# Source service setup functions
-. ./common/service/dbus.sh
-. ./common/service/network-manager.sh
-. ./common/service/pipewire.sh
-. ./common/service/polkitd.sh
-
 PROGNAME=$(basename "$0")
 ARCH=$(uname -m)
 IMAGES="base"
@@ -26,9 +20,9 @@ usage() {
 
 	OPTIONS
 	 -a <arch>     Set architecture (or platform) in the image
-	 -b <variant>  One of base, base-wayland, base-x11, server, bspwm, kde, river,
-                   xfce or xfce-wayland (default: base). May be specified multiple times
-                   to build multiple variants
+	 -b <variant>  One of base, server, xfce,xfce-wayland, kde, bspwm, river
+                 (default: base). May be specified multiple times to build 
+                 multiple variants.
 	 -d <date>     Override the datestamp on the generated image (YYYYMMDD format)
 	 -t <arch-date-variant>
 	               Equivalent to setting -a, -b, and -d
@@ -58,10 +52,6 @@ shift $((OPTIND - 1))
 INCLUDEDIR=$(mktemp -d)
 trap "cleanup" INT TERM
 
-info_msg() {
-    echo "[INFO] $1"
-}
-
 cleanup() {
     rm -rf "$INCLUDEDIR"
 }
@@ -79,54 +69,56 @@ include_installer() {
     fi
 }
 
-#include_installer_py()
+setup_pipewire() {
+    PKGS="$PKGS pipewire alsa-pipewire"
+    case "$ARCH" in
+        asahi*)
+            PKGS="$PKGS asahi-audio"
+            SERVICES="$SERVICES speakersafetyd"
+            ;;
+    esac
+    mkdir -p "$INCLUDEDIR"/etc/xdg/autostart
+    ln -sf /usr/share/applications/pipewire.desktop "$INCLUDEDIR"/etc/xdg/autostart/
+    mkdir -p "$INCLUDEDIR"/etc/pipewire/pipewire.conf.d
+    ln -sf /usr/share/examples/wireplumber/10-wireplumber.conf "$INCLUDEDIR"/etc/pipewire/pipewire.conf.d/
+    ln -sf /usr/share/examples/pipewire/20-pipewire-pulse.conf "$INCLUDEDIR"/etc/pipewire/pipewire.conf.d/
+    mkdir -p "$INCLUDEDIR"/etc/alsa/conf.d
+    ln -sf /usr/share/alsa/alsa.conf.d/50-pipewire.conf "$INCLUDEDIR"/etc/alsa/conf.d
+    ln -sf /usr/share/alsa/alsa.conf.d/99-pipewire-default.conf "$INCLUDEDIR"/etc/alsa/conf.d
+}
 
 include_cli() {
-    mkdir -p "$INCLUDEDIR"/etc
-    mkdir -p "$INCLUDEDIR"/etc/default
-    mkdir -p "$INCLUDEDIR"/etc/runit
-    mkdir -p "$INCLUDEDIR"/etc/skel
-    mkdir -p "$INCLUDEDIR"/etc/skel/.config
-    mkdir -p "$INCLUDEDIR"/etc/X11
-    mkdir -p "$INCLUDEDIR"/etc/X11/xorg.conf.d
-    mkdir -p "$INCLUDEDIR"/usr
-    mkdir -p "$INCLUDEDIR"/usr/share
-    mkdir -p "$INCLUDEDIR"/usr/share/fonts
+  mkdir -p "$INCLUDEDIR"/etc
+  mkdir -p "$INCLUDEDIR"/etc/default
+  mkdir -p "$INCLUDEDIR"/etc/runit
+  mkdir -p "$INCLUDEDIR"/etc/skel
+  mkdir -p "$INCLUDEDIR"/root
 
-    cp ./common/script/resolv.conf "$INCLUDEDIR"/etc/
-    cat > "$INCLUDEDIR"/etc/resolv.conf << EOF
-nameserver 1.1.1.1
-nameserver 8.8.8.8
-EOF
+  cp ./common/script/resolv.conf "$INCLUDEDIR"/etc/
+  cp ./common/script/os-release "$INCLUDEDIR"/etc/
+  cp ./common/script/.bashrc "$INCLUDEDIR"/etc/skel/
+  cp ./common/script/root/.bashrc "$INCLUDEDIR"/root/
 
-    cp ./common/script/os-release "$INCLUDEDIR"/etc/
-    cp ./common/script/grub "$INCLUDEDIR"/etc/default/
-    cp ./common/script/.bashrc "$INCLUDEDIR"/etc/skel/
-
-    cp -r ./common/base-x11/xorg.conf.d "$INCLUDEDIR"/etc/X11/xorg.conf.d/
-    cp -r ./common/script/runit/* "$INCLUDEDIR"/etc/runit/
+  cp -r ./common/script/runit/* "$INCLUDEDIR"/etc/runit/
 }
-#include_gui()
 
-#include_vur-helper()
+# include_gui() {}
+# include_config() {}
 
-#include_base-x11()
-#include_base-wayland()
-#include_server()
-include_bspwm() {
-    PKGS="$PKGS bspwm sxhkd polybar dunst rofi feh alacritty picom Thunar brightnessctl pavucontrol mousepad lm_sensors xdg_user_dirs"
-    cp -r ./common/bspwm/skel/.config/* "$INCLUDEDIR"/etc/skel/.config/
-    cp -r ./common/bspwm/skel/.fonts/* "$INCLUDEDIR"/usr/share/fonts/
-}
-#include_kde()
-#include_river()
-#include_xfce()
-#include_xfce-wayland()
+
+# include_x11() {}
+# include_way() {}
+
+
+# include_xfce() {}
+# include_kde() {}
+# include_bspwm() {}
+# include_river() {}
 
 build_variant() {
     variant="$1"
     shift
-    IMG=t4n-os-live-${ARCH}-${DATE}-${variant}.iso
+    IMG=t4n_os-live-${ARCH}-${DATE}-${variant}.iso
 
     # el-cheapo installer is unsupported on arm because arm doesn't install a kernel by default
     # and to work around that would add too much complexity to it
@@ -163,57 +155,45 @@ build_variant() {
     PKGS="dialog cryptsetup lvm2 mdadm void-docs-browse xtools-minimal xmirror chrony tmux $A11Y_PKGS $GRUB_PKGS"
     FILE_PKGS="tar xz gzip zstd zip unzip 7zip p7zip"
     FONTS="font-misc-misc terminus-font dejavu-fonts-ttf"
-    FONTS_WM="font-firacode font-iosevka nerd-fonts-symbols-ttf"
     WAYLAND_PKGS="$GFX_WL_PKGS $FONTS orca"
     XORG_PKGS="$GFX_PKGS $FONTS xorg-fonts xorg-server xorg-apps xorg-minimal xorg-input-drivers setxkbmap xauth orca"
     SERVICES="sshd chronyd"
 
     LIGHTDM_SESSION=''
-    BSPWM=''
 
     case $variant in
         base)
-            PKGS="$PKGS $XORG_PKGS $FILE_PKGS tree bat eza exa nano elogind"
+            PKGS="$PKGS $FILE_PKGS tree bat eza exa nano NetworkManager"
             CLI=yes
 
-            SERVICES="$SERVICES dhcpcd wpa_supplicant acpid elogind"
+            SERVICES="$SERVICES dbus NetworkManager acpid"
         ;;
-        #base-wayland)
-        #    SERVICES="$SERVICES dhcpcd wpa_supplicant acpid"
-        #;;
-        base-x11)
-            PKGS="$PKGS $XORG_PKGS $FILE_PKGS tree bat eza exa nano network-manager-applet"
-            CLI=yes
-
-            SERVICES="$SERVICES dbus acpid"
-        ;;
-        #server)
-        #    SERVICES="$SERVICES dhcpcd wpa_supplicant acpid"
-        #;;
-        bspwm)
-            PKGS="$PKGS $XORG_PKGS $FILE_PKGS $FONTS_WM tree bat eza exa nano elogind NetworkManager lightdm lightdm-gtk-greeter gvfs-afc gvfs-mtp gvfs-smb udisks2 firefox"
-            CLI=yes
-            BSPWM='yes'
-
-            SERVICES="$SERVICES dbus lightdm NetworkManager polkitd elogind"
-            LIGHTDM_SESSION='bspwm'
-        ;;
-        #kde)
-        #    SERVICES="$SERVICES dhcpcd wpa_supplicant acpid"
-        #;;
-        #river)
-        #    SERVICES="$SERVICES dhcpcd wpa_supplicant acpid"
-        #;;
-        #xfce*)
-        #    PKGS="$PKGS $XORG_PKGS lightdm lightdm-gtk-greeter xfce4 gnome-themes-standard gnome-keyring network-manager-applet gvfs-afc gvfs-mtp gvfs-smb udisks2 firefox xfce4-pulseaudio-plugin"
-        #    SERVICES="$SERVICES dbus lightdm NetworkManager polkitd"
-        #    LIGHTDM_SESSION=xfce
-
-        #    if [ "$variant" == "xfce-wayland" ]; then
-        #        PKGS="$PKGS $WAYLAND_PKGS labwc"
-        #        LIGHTDM_SESSION="xfce-wayland"
-        #    fi
-        #;;
+        # server)
+        #     SERVICES="$SERVICES dhcpcd wpa_supplicant acpid"
+        # ;;
+        # xfce*)
+        #     PKGS="$PKGS $XORG_PKGS lightdm lightdm-gtk-greeter xfce4 gnome-themes-standard gnome-keyring network-manager-applet gvfs-afc gvfs-mtp gvfs-smb udisks2 firefox xfce4-pulseaudio-plugin"
+        #     SERVICES="$SERVICES dbus lightdm NetworkManager polkitd"
+        #     LIGHTDM_SESSION=xfce
+        #
+        #     if [ "$variant" == "xfce-wayland" ]; then
+        #         PKGS="$PKGS $WAYLAND_PKGS labwc"
+        #         LIGHTDM_SESSION="xfce-wayland"
+        #     fi
+        # ;;
+        # kde)
+        #     PKGS="$PKGS $XORG_PKGS kde5 konsole firefox dolphin NetworkManager"
+        #     SERVICES="$SERVICES dbus NetworkManager sddm"
+        # ;;
+        # bspwm)
+        #     PKGS="$PKGS $XORG_PKGS lxde lightdm lightdm-gtk-greeter gvfs-afc gvfs-mtp gvfs-smb udisks2 firefox"
+        #     SERVICES="$SERVICES acpid dbus dhcpcd wpa_supplicant lightdm polkitd"
+        #     LIGHTDM_SESSION=LXDE
+        # ;;
+        # river)
+        #     PKGS="$PKGS $XORG_PKGS lxqt sddm gvfs-afc gvfs-mtp gvfs-smb udisks2 firefox"
+        #     SERVICES="$SERVICES dbus dhcpcd wpa_supplicant sddm polkitd"
+        # ;;
         *)
             >&2 echo "Unknown variant $variant"
             exit 1
@@ -231,11 +211,7 @@ EOF
     fi
 
     if [ "$CLI" = yes ]; then
-        include_cli
-    fi
-
-    if [ "$BSPWM" = 'yes' ]; then
-        include_bspwm
+      include_cli
     fi
 
     if [ "$WANT_INSTALLER" = yes ]; then
@@ -247,18 +223,11 @@ EOF
     fi
 
     case "$variant" in
-        base|server)
-            ;;
-        base-x11|base-wayland)
-            setup_dbus "$INCLUDEDIR" "$ARCH"
-            setup_nm "$INCLUDEDIR" "$ARCH"
-            ;;
-        *)
-            setup_dbus "$INCLUDEDIR" "$ARCH"
-            setup_nm "$INCLUDEDIR" "$ARCH"
-            setup_pipewire "$INCLUDEDIR" "$ARCH"
-            setup_polkitd "$INCLUDEDIR" "$ARCH"
-            ;;
+      base|server)
+      ;;
+      *)
+        setup_pipewire
+      ;;
     esac
 
     ./t4n-live.sh -a "$TARGET_ARCH" -o "$IMG" -p "$PKGS" -S "$SERVICES" -I "$INCLUDEDIR" \
@@ -268,7 +237,7 @@ EOF
 }
 
 if [ ! -x t4n-live.sh ]; then
-    echo t4n-live.sh not found >&2
+    echo mklive.sh not found >&2
     exit 1
 fi
 

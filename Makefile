@@ -14,7 +14,7 @@ T_PXE_ARCHS=x86_64{,-musl}
 T_WSL_ARCHS={x86_64,aarch64}{,-musl}
 
 LIVE_ARCHS:=$(shell echo $(T_LIVE_ARCHS))
-LIVE_FLAVORS:=base base-x11 base-wayland server bspwm kde river xfce xfce-wayland
+LIVE_FLAVORS:=base server xfce xfce-wayland kde bspwm river
 LIVE_PLATFORMS:=pinebookpro x13s
 ARCHS:=$(shell echo $(T_ARCHS))
 PLATFORMS:=$(shell echo $(T_PLATFORMS))
@@ -57,14 +57,14 @@ distdir-$(DATECODE):
 	mkdir -p distdir-$(DATECODE)
 
 dist: distdir-$(DATECODE)
-	mv void*$(DATECODE)* distdir-$(DATECODE)/
+	mv t4n*$(DATECODE)* distdir-$(DATECODE)/
 
 live-iso-all: $(ALL_LIVE_ISO)
 
 live-iso-all-print:
 	@echo $(ALL_LIVE_ISO) | sed "s: :\n:g"
 
-void-live-%.iso: t4n-iso.sh
+t4n-live-%.iso: t4n-iso.sh
 	@[ -n "${CI}" ] && printf "::group::\x1b[32mBuilding $@...\x1b[0m\n" || true
 	$(if $(findstring aarch64,$*), \
 		$(SUDO) ./t4n-iso.sh -r $(REPOSITORY) -t $* -- -P "$(LIVE_PLATFORMS)", \
@@ -76,7 +76,7 @@ rootfs-all: $(ALL_ROOTFS)
 rootfs-all-print:
 	@echo $(ALL_ROOTFS) | sed "s: :\n:g"
 
-void-%-ROOTFS-$(DATECODE).tar.xz: t4n-rootfs.sh
+t4n_os-%-ROOTFS-$(DATECODE).tar.xz: t4n-rootfs.sh
 	@[ -n "${CI}" ] && printf "::group::\x1b[32mBuilding $@...\x1b[0m\n" || true
 	$(SUDO) ./t4n-rootfs.sh $(XBPS_REPOSITORY) -x $(COMPRESSOR_THREADS) -o $@ $*
 	@[ -n "${CI}" ] && printf '::endgroup::\n' || true
@@ -87,9 +87,9 @@ platformfs-all-print:
 	@echo $(ALL_PLATFORMFS) | sed "s: :\n:g"
 
 .SECONDEXPANSION:
-void-%-PLATFORMFS-$(DATECODE).tar.xz: void-$$(shell ./lib.sh platform2arch %)-ROOTFS-$(DATECODE).tar.xz t4n-platformfs.sh
+t4n_os-%-PLATFORMFS-$(DATECODE).tar.xz: t4n_os-$$(shell ./lib.sh platform2arch %)-ROOTFS-$(DATECODE).tar.xz t4n-platformfs.sh
 	@[ -n "${CI}" ] && printf "::group::\x1b[32mBuilding $@...\x1b[0m\n" || true
-	$(SUDO) ./t4n-platformfs.sh $(XBPS_REPOSITORY) -x $(COMPRESSOR_THREADS) -o $@ $* void-$(shell ./lib.sh platform2arch $*)-ROOTFS-$(DATECODE).tar.xz
+	$(SUDO) ./t4n-platformfs.sh $(XBPS_REPOSITORY) -x $(COMPRESSOR_THREADS) -o $@ $* t4n_os-$(shell ./lib.sh platform2arch $*)-ROOTFS-$(DATECODE).tar.xz
 	@[ -n "${CI}" ] && printf '::endgroup::\n' || true
 
 images-all: platformfs-all images-all-sbc images-all-cloud
@@ -104,16 +104,16 @@ images-all-cloud: $(ALL_CLOUD_IMAGES)
 images-all-print:
 	@echo $(ALL_SBC_IMAGES) $(ALL_CLOUD_IMAGES) | sed "s: :\n:g"
 
-void-%-$(DATECODE).img.xz: void-%-PLATFORMFS-$(DATECODE).tar.xz t4n-image.sh
+t4n_os-%-$(DATECODE).img.xz: t4n_os-%-PLATFORMFS-$(DATECODE).tar.xz t4n-image.sh
 	@[ -n "${CI}" ] && printf "::group::\x1b[32mBuilding $@...\x1b[0m\n" || true
-	$(SUDO) ./t4n-image.sh -x $(COMPRESSOR_THREADS) -o $(basename $@) void-$*-PLATFORMFS-$(DATECODE).tar.xz
+	$(SUDO) ./t4n-image.sh -x $(COMPRESSOR_THREADS) -o $(basename $@) t4n_os-$*-PLATFORMFS-$(DATECODE).tar.xz
 	@[ -n "${CI}" ] && printf '::endgroup::\n' || true
 
 # Some of the images MUST be compressed with gzip rather than xz, this
 # rule services those images.
-void-%-$(DATECODE).tar.gz: void-%-PLATFORMFS-$(DATECODE).tar.xz t4n-image.sh
+t4n_os-%-$(DATECODE).tar.gz: t4n_os-%-PLATFORMFS-$(DATECODE).tar.xz t4n-image.sh
 	@[ -n "${CI}" ] && printf "::group::\x1b[32mBuilding $@...\x1b[0m\n" || true
-	$(SUDO) ./t4n-image.sh -x $(COMPRESSOR_THREADS) void-$*-PLATFORMFS-$(DATECODE).tar.xz
+	$(SUDO) ./t4n-image.sh -x $(COMPRESSOR_THREADS) t4n_os-$*-PLATFORMFS-$(DATECODE).tar.xz
 	@[ -n "${CI}" ] && printf '::endgroup::\n' || true
 
 pxe-all: $(ALL_PXE_ARCHS)
@@ -121,9 +121,9 @@ pxe-all: $(ALL_PXE_ARCHS)
 pxe-all-print:
 	@echo $(ALL_PXE_ARCHS) | sed "s: :\n:g"
 
-void-%-NETBOOT-$(DATECODE).tar.gz: void-%-ROOTFS-$(DATECODE).tar.xz t4n-net.sh
+t4n_os-%-NETBOOT-$(DATECODE).tar.gz: t4n_os-%-ROOTFS-$(DATECODE).tar.xz t4n-net.sh
 	@[ -n "${CI}" ] && printf "::group::\x1b[32mBuilding $@...\x1b[0m\n" || true
-	$(SUDO) ./t4n-net.sh void-$*-ROOTFS-$(DATECODE).tar.xz
+	$(SUDO) ./t4n-net.sh t4n_os-$*-ROOTFS-$(DATECODE).tar.xz
 	@[ -n "${CI}" ] && printf '::endgroup::\n' || true
 
 wsl-all: $(ALL_WSL)
@@ -131,7 +131,7 @@ wsl-all: $(ALL_WSL)
 wsl-all-print:
 	@echo $(ALL_WSL) | sed "s: :\n:g"
 
-void-%-$(DATECODE).wsl: t4n-rootfs.sh
+t4n_os-%-$(DATECODE).wsl: t4n-rootfs.sh
 	@[ -n "${CI}" ] && printf "::group::\x1b[32mBuilding $@...\x1b[0m\n" || true
 	$(SUDO) ./t4n-rootfs.sh $(XBPS_REPOSITORY) -x $(COMPRESSOR_THREADS) -b wsl-base -o $@ $*
 	@[ -n "${CI}" ] && printf '::endgroup::\n' || true

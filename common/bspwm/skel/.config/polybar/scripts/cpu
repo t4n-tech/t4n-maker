@@ -1,6 +1,0 @@
-#!/usr/bin/bash
-
-# Ambil penggunaan CPU
-cpu_load=$(grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage}')
-printf " %.1f%%\n" "$cpu_load"
-

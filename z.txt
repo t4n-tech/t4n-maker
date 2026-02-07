@@ -1,0 +1,3 @@
+Perubahan :
+
+1. Modif t4n-live.sh & t4n-iso.sh
